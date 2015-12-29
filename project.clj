@@ -7,6 +7,10 @@
                  [jarohen/chime "0.1.7"]
                  [org.clojure/clojure "1.7.0"]
                  [org.clojure/core.async "0.2.374"]]
+  :aliases {"spec" ["with-profile" "+speclj" "spec"]}
   :profiles {:dev {:dependencies [[honeysql "0.6.2"]
                                   [org.clojure/java.jdbc "0.4.2"]
-                                  [speclj "3.3.1"]]}})
+                                  [speclj "3.3.1"]]
+                   :plugins [[speclj "3.3.1"]]
+                   :src-paths ["src" "spec"]}
+             :speclj {:test-paths ["spec"]}})
