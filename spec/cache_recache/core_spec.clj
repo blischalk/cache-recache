@@ -30,10 +30,15 @@
   (it "checks cache validity every n interval"
     (let [call-counter (atom 0)
           strategy (CacheStrategy. "foobar"
-                                   (fn [] (swap! call-counter inc))
+                                   (fn []
+                                     (swap! call-counter inc))
                                    (fn [] )
-                                   1)]
+                                   1)
+          cache (cache-recache strategy)]
       (Thread/sleep 5000)
+      (-> cache
+          :channel
+          close!)
       (should (> @call-counter 1))))
 
   (it "notifies on channel a cache refresh"))
