@@ -6,6 +6,9 @@
 
 
 (def basic-test-data {:guitar "string" :piano "percussion"})
+(def updated-test-data {:guitar "string"
+                        :piano "percussion"
+                        :xylophone "percussion"})
 
 (def basic-strategy
   (CacheStrategy. "instruments"
@@ -43,9 +46,27 @@
       (should (> @call-counter 1))))
 
   (it "notifies on channel a cache refresh"
+    (let [data (atom [basic-test-data updated-test-data])
+          cache
+          (cache-recache
+           (CacheStrategy. "instruments"
+                           (fn []
+                             (let [d (first @data)]
+                               (reset! data (rest @data))
+                               d))
+                           #(println "hello world.")
+                           1))
+          ch (:channel cache)
+          cron-ch (:cron-ch cache)
+          _ (should= basic-test-data (:data cache))
+          result (<!! ch)]
+      (close! cron-ch)
+      (should= [:update updated-test-data] result)))
+
+  (it "notifies when no op occurs"
     (let [cache (cache-recache basic-strategy)
           ch (:channel cache)
           cron-ch (:cron-ch cache)
           result (<!! ch)]
       (close! cron-ch)
-      (should= basic-test-data (:update result)))))
+      (should= [:no-op basic-test-data] result))))

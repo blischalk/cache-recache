@@ -10,9 +10,12 @@
 (defrecord CacheStrategy [name populate on-invalidate freq-mins])
 
 (defn ^:private cache-it [name f ch cron-ch]
-  (let [data (f)]
-    (swap! cache-store assoc name (Cache. data ch cron-ch))
-    (>!! ch {:update data})))
+  (let [new (f)
+        prev (:data (get @cache-store name))]
+    (if (= prev new)
+      (>!! ch [:no-op prev])
+      (do (swap! cache-store assoc name (Cache. new ch cron-ch))
+          (>!! ch [:update new])))))
 
 (defn cache-recache
   "Sets up a cache and polling to re-cache"
