@@ -15,15 +15,16 @@
 
 (describe "cache-recache"
   (it "returns a copy of cached data"
-    (-> basic-strategy
-        cache-recache
-        :data
-        (should= basic-test-data)))
+    (let [cache (-> basic-strategy
+                    cache-recache)
+          ch (:cron-ch cache)]
+      (should= (:data cache) basic-test-data)
+      (close! ch)))
 
   (it "returns a channel that acts like a channel"
     (-> basic-strategy
         cache-recache
-        :channel
+        :cron-ch
         close!
         should-not-throw))
 
@@ -35,10 +36,16 @@
                                    (fn [] )
                                    1)
           cache (cache-recache strategy)]
-      (Thread/sleep 5000)
+      (Thread/sleep 2000)
       (-> cache
-          :channel
+          :cron-ch
           close!)
       (should (> @call-counter 1))))
 
-  (it "notifies on channel a cache refresh"))
+  (it "notifies on channel a cache refresh"
+    (let [cache (cache-recache basic-strategy)
+          ch (:channel cache)
+          cron-ch (:cron-ch cache)
+          result (<!! ch)]
+      (close! cron-ch)
+      (should= basic-test-data (:update result)))))

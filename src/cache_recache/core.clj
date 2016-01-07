@@ -6,12 +6,13 @@
 
 (def ^:private cache-store (atom {}))
 
-(defrecord Cache [data channel])
+(defrecord Cache [data channel cron-ch])
 (defrecord CacheStrategy [name populate on-invalidate freq-mins])
 
-(defn cache-it [name f ch]
+(defn ^:private cache-it [name f ch cron-ch]
   (let [data (f)]
-    (swap! cache-store assoc name (Cache. data ch))))
+    (swap! cache-store assoc name (Cache. data ch cron-ch))
+    (>!! ch {:update data})))
 
 (defn cache-recache
   "Sets up a cache and polling to re-cache"
@@ -20,15 +21,15 @@
         data (handler)
         name (:name strategy)
         ch (chan)
-        cache (Cache. data ch)
         times (periodic-seq (t/now) (-> (:freq-mins strategy) t/seconds))
-        chimes (chime-ch times {:ch (chan (sliding-buffer 1))})]
+        chimes (chime-ch times {:ch (chan (sliding-buffer 1))})
+        cache (Cache. data ch chimes)]
     ;; Prime the pump with initial dataset
     (swap! cache-store assoc name cache)
 
     ;; Schedule polling
     (go-loop []
       (when-let [time (<! chimes)]
-        (cache-it name handler ch)
+        (cache-it name handler ch chimes)
         (recur)))
     cache))
